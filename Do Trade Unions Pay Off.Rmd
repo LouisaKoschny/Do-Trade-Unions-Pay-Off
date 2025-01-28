@@ -1,0 +1,317 @@
+---
+title: 'Do Trade Unions Pay Off? A Regression Analysis of the Impact of Trade Union Membership on Annual Personal Income'
+date: "20/12/2023"
+output: 
+  html_document:
+    theme:
+      bg: "#ffffff"
+      fg: "#22223b"
+      primary: "#598392"
+      secondary: "#aec3b0"
+      success: "#124559"
+      base_font:
+        google: "Quattrocento"
+      heading_font:
+        google: "Playfair Display"
+      code_font:
+        google: "JetBrains Mono"
+bibliography: Quantitative findings report.bib
+---
+<!-- This is a suggested template to write Assignment 2. Feel free to make changes as appropriate according to the guidance. -->
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message=FALSE, warning=FALSE)
+```
+
+```{r preamble, include=FALSE}
+# Install packages if missing
+list.of.packages <- c("tidyverse", "stargazer", "devtools", "haven", "ggplot2","stringr", "wesanderson", "showtext", "dplyr", "huxtable", "vtable", "knitr", "skimr", "kableExtra", "Hmisc")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+# Wordcount addin
+devtools::install_github("benmarwick/wordcountaddin", type = "source", dependencies = TRUE, timeout =120)
+# Load packages
+
+library(tidyverse)
+library(stargazer)
+library(devtools)
+library(haven)
+library(ggplot2)
+library(stringr)
+library(wesanderson)
+library(showtext)
+library(dplyr)
+library(huxtable)
+library(knitr)
+library(skimr)
+library(vtable)
+library(kableExtra)
+library(Hmisc)
+
+
+
+
+# insert font and indicate that showtext should be invoked whenever a plot is created
+font_add_google("Quattrocento", family = "special")
+font_add_google("Quattrocento", family = "special2")
+font_add_google("Quattrocento", family = "special3")
+showtext_auto()
+# Read data
+nilt <- readRDS("data/fullnilt_2012.rds")
+# Create data subset
+nilt_subset <- subset(nilt, select=c(persinc2, rsex, religcat, orient, uninatid, tunionsa, rsuper, rage))
+# I will filter out the columns containing N/A as a response in any of the following columns: persinc2, rsex, religcat, orient, uninatid, tunionsa, rsuper, rage.
+nilt_subset2 <- nilt_subset %>%
+  filter(!is.na(tunionsa) & !is.na(persinc2) & !is.na(rsex) & !is.na(religcat) & !is.na(orient) & !is.na(uninatid) & !is.na(rsuper) & !is.na(rage))
+
+  
+
+```
+Word count: `r wordcountaddin::word_count("Assignmet2.Rmd") - 206`  
+  
+
+## I. Introduction  
+<!-- Word count: approx. 400  -->  
+Historically, trade unions and their effects on wage setting in the labour market have been subject to extensive scholarly inquiry. The theoretical stance taken, and the role assigned to trade unions has varied from scholar to scholar. In the following, I shall introduce two theoretical stances and draw my own conclusions on the matter using a range of descriptive and inferential statistics.  
+In their book _What Do Unions Do?_, Freeman and Medoff (1984) introduce the idea of "union monopoly power", which describes the way how unions can lead employers to increase workers' wages through collective bargaining. They point out that this so called "Union Wage Effect" differs across industries, depending on how sensitive employment in a sector is towards wage fluctuations (Freeman and Medoff, 1984; Blanchflower and Bryson, 2004). Overall, they argue that the general assumption that trade unions are successful in raising wages is true and the union wage effect is indeed measurable and significant (Freeman and Medoff, 1984, pp.43-60). Their belief that trade unions are actors intrinsic to the market has been challenged by theorists from other schools of thought. Wilmers (2017) uses theories from the sociology of labour to underpin his work on the union wage effect. He provides an alternative to the idea of the union holding a monopoly in the supply of labour, allowing them to artificially push up wages (Blanchflower and Bryson, 2004). He identifies unions as an organisation external to the market that can exercise its power over working conditions and wage setting through means such as industrial action, strikes, forms of open support and public pressure. While Wilmer's work aims to examine the extent to which union activism influences union success and subsequent improvements in wages this report aims to investigate the question: Do individuals who are trade union members earn more than those who are not trade union members?  
+Therefore, my hypothesis will be as follows: 
+
+**H1: On average, members of a trade union have a higher annual personal income than those who are not trade union members.**
+
+
+
+
+## II. Data and Method
+<!-- Word count: approx. 800 -->
+<!-- In this section your goal is to demonstrate that you can describe data and that you understand research design and data collection. -->
+  
+#### The NILT Survey
+  
+To investigate the effect of trade union membership on annual personal income, I will be drawing on the data from the Northern Ireland Life and Times Survey 2012. This is a household survey that aims to provide insights into how people's demeanour and views towards certain social affairs change over time and includes other relevant parameters (ARK, 2012). The publishing organisation ARK is a research alliance between Queens University Belfast and Ulster University (ARK, 2023). For the purpose of their survey, ARK have chosen a random sample of addresses included in the Postcode Address File database.  
+  
+#### Sample Size  
+  
+The number of households out of the initially selected 2350 that have been deemed eligible to participate in the NILT survey is 2126, however with a response rate of 57% the final number of respondents was 1204 (ARK, 2012). While this is a quite moderate response rate, there is a possibility of nonresponse bias compromising the validity of our results (Lohr, 2022, p.312). For the purpose of my analysis, I excluded observations where responses were missing. This effectively reduced the sample size to 675. This may have introduced selection bias into the report, despite ARK’s efforts to make the sampling process as random as possible. This minimises the representativeness of the sample for the whole population.   
+  
+#### The Dependent Variable  
+  
+As my dependent variable I will be using Annual Personal Income, which is included in the NILT survey as the variable “persinc2”. This captures the respondent’s annual “personal income before tax and insurance contributions” in British Pounds (ARK, 2012).  According to the codebook accompanying the 2012 NILT survey, the values collected for this variable are “computed from [the] midpoint of [the individual’s] income band” (ARK, 2012). Therefore, it should be noted that the real values of the respective respondents’ income may differ slightly, which should be kept in mind when interpreting the results from statistical testing.  
+  
+**Figure 1: The Dependent Variable**  
+  
+  To be mindful of any observations that were dropped when creating the regression model included in this report, the following graphs are based off a data set that includes the same observations as the regression model, i.e., base it off complete data sets only.  
+
+   
+```{r visualisation of dependent variable, echo= FALSE}
+ggplot(nilt_subset2, aes(x= persinc2)) +
+  geom_histogram(fill="#ffacc5", colour="#f20089") +
+
+   
+  labs(
+    x = "Annual Personal Income (£)",
+    y = "Frequency") +
+  ggtitle("Distribution of Annual Personal Income") +
+    theme_gray() +
+  theme(
+     plot.title=element_text(family='special2', hjust=0.5, vjust=0.5,face='bold', colour='#1d3557', size=18),
+     axis.title.x = element_text(family="special3", size = 11, face = "bold", colour = "black"),
+     axis.title.y = element_text(family="special3", size = 11, face = "bold", colour = "black"))
+
+```
+  
+    
+Looking at the above histogram visualising the distribution of the annual personal income variable, we can see the graph appears right-skewed and is therefore not normally distributed. I shall conduct some further testing later on to double-check if this is accurate. 
+  
+**Figure 2:**  
+  
+```{r Fig.2: income vs TU membership box plot, echo=FALSE}
+ggplot(data= nilt_subset2, aes(x=tunionsa, y=persinc2)) +
+  geom_boxplot(colour= "#1d3557", fill="#ffacc5",alpha=0.6) +
+  stat_summary(fun.y=mean, geom="point", shape=20, size=3, color="#f20089", fill="#f20089") +
+  theme(legend.position = "none")+
+scale_fill_brewer(palette="Set1") +
+  labs(
+    x = "Trade Union Membership",
+    y = "Annual Personal Income (£)") +
+  ggtitle("Annual Personal Income vs. Trade Union Membership") +
+    theme_gray() +
+  theme(
+     plot.title=element_text(family='special2', hjust=0.5, vjust=0.5,face='bold', colour='#1d3557', size=18),
+     axis.title.x = element_text(family="special3", size = 11, face = "bold", colour = "black"),
+     axis.title.y = element_text(family="special3", size = 11, face = "bold", colour = "black")
+  )  
+```
+  
+  
+I have chosen a boxplot for Figure 2 that shows the difference in distribution of annual personal income between members and non-members of trade unions.
+As measures of central tendency, we have both the median as a thick navy horizontal line as well as the mean as a pink dot for each of the trade union membership categories. What I wanted to visualise here was first of all, how the mean for both categories is higher than their respective medians, which suggests a right-skewed distribution for either category. We can also conclude that among both categories there must be a fair number of respondents on the higher income spectrum as the median helps exclude outliers (Wetcher-Hendricks, 2011). Additionally, I chose this visualisation as we can see straight away that the values for both measures of central tendency for trade union members are higher than those of non-members.
+    
+#### Assessing the Nature of Distribution 
+When looking at Figure 1 visualising the distributions of Annual Personal Income for trade union members and non-members, we may have intuitively come to the conclusion that the data is not normally distributed as we can see that the plots are right-skewed. Still, I will double-check, using a statistical test how our data is distributed to make the right decision on what other tests are appropriate to run. For this purpose, I will be conducting a Shapiro-Wilk test (Field et al., 2012, pp.182-185).   
+  
+```{r shapiro wilk test, echo=FALSE}
+shapiro.test(nilt_subset2$persinc2[nilt_subset2$tunionsa == "No"])
+shapiro.test(nilt_subset2$persinc2[nilt_subset2$tunionsa == "Yes"])
+```
+  
+For both groups - trade union members and non-members - we receive a p-value that is significantly below 0.5. We conclude, that neither data is normally distributed.
+  
+  
+
+#### Summary of Descriptive Statistics  
+  
+**Table 1: Summary Statistics**  
+  
+```{r summary statistics, echo=FALSE}
+summary_table <- skim(nilt_subset2)
+kable(summary_table) %>%
+  kable_styling(full_width = TRUE, position = "center", font_size = 14, bootstrap_options = "hover")
+```
+  
+While descriptive statistics are of little help when it comes to categorical or dummy variables, such as sex, religion, sexual orientation, constitutional view, trade union membership (our independent variable) and supervisory position, they are quite insightful when it comes to the continuous numeric variables of personal income and age. Visibly, personal income has a mean of approximately 16892.1 (£) with a standard deviation of 13447.7. This suggests that there is a high variability and means that the data is quite dispersed. Therefore, the median - above denoted as p50 - will be a more useful measure of central tendency in our case as it helps exclude outliers (Wetcher-Hendricks, 2011). Additionally, the fact that the mean income is a fair bit higher than the median suggests a right-skewed distribution. Similarly, the age variable has a standard deviation of roughly 17.1 and a mean of about 46.8. This also indicates a relatively high variability among values collected for the age variable. The mean for the latter is a bit higher than the median, which also indicates a right-skewed distribution. This would mean that there is a high number of younger individuals, with a few older respondents pushing up the mean value.
+In terms of implications for the linear regression model, the outlier values may disproportionately affect the estimated regression coefficients. 
+
+
+## III. Results and Discussion  
+<!-- Word count: approx. 1300 -->
+<!-- In this section your goal is to demonstrate that you can interpret quantitative results. Additional credit is available if you are able to relate these findings to social science theories or if you can put the findings in context. -->
+  
+We run a multiple linear regression to assess the impact of a number of categorical independent dummy variables (sex, religion, sexual orientation, constitutional view, trade union membership and supervisory role), as well as one continuous independent numerical variable (age) on our dependent variable - annual personal income - which is continuous and numerical in its nature. This multiple linear regression model is an especially useful tool for us as it considers the isolated effect of each of the predictor variables, controlling for the effect of other variables.
+  
+**Table 2: Regression Results**
+```{r regression model, echo = FALSE, results='asis'}
+# This chunk will run the linear regression and print the output
+# run model
+model <- lm(persinc2 ~ rsex + religcat + orient + uninatid + tunionsa + rsuper + rage, data = nilt)
+# Set name of variables
+cov_labels <-
+  c('Sex: Female (ref.: Male)', 'Religion: Protestant (ref.: Catholic)', 'Religion: No religion', 
+    'Sexual Orientation: Homosexual (ref.: Heterosexual)', 'Sexual Orientation: bi-sexual', 'Sexual Orientation: Other',
+    'Constitutional View: Nationalist (ref.: Unionist)', 'Constitutional view: Neither',
+    'Trade union membership: No (ref.: Yes)', 'Supervisor: No (ref.: Yes)', 'Age', 'Constant')
+# Print result
+stargazer(model,
+          style = "ajs",
+          type = 'html',
+          title = "Regression results", 
+          header = TRUE,
+          single.row = FALSE,
+          covariate.labels = cov_labels,
+          dep.var.caption  = "Dependent Variable",
+          dep.var.labels   = "Annual Personal Income (GBP)")  
+
+
+```
+  
+    
+**Table 3: Summary of Regression Results**
+
+```{r summary of model, echo=FALSE}
+# We print a summary of the regression model.
+summary(model)
+
+
+```
+
+#### (In-)Significance of Variables
+
+Daróczi (2015) argues, the relationship between the dependent and the independent variable is statistically significant if the p-value takes on a value smaller then 0.05. Therefore, we can conclude that the variables which have a statistically significant effect on a person's annual personal income are sex, trade union membership, supervisory position and age, with p-values that are all smaller than 0.05. The variables that we found to be of no statistically significant influence on annual personal income with p-values above 0.05 were religion, sexual orientation and constitutional view.
+From the summary table above we conclude that the effect of trade union membership is especially significant because the p-value for trade union membership is below 0.001. We can therefore reject the null-hypothesis and conclude that our result is statistically significant.
+The t-value for trade union membership at -5.402 also helps us come to this conclusion as such a high t-value helps indicate a statistically significant relationship between the dependent and the independent variable. 
+  
+#### Discussion of Significant Variables' Coefficients  
+  
+I will discuss the regression coefficient and standard error for Trade union membership. In table 2, we can see that "Trade Union Membership: No" with a regression coefficient of -5,277.978, and a standard error of 977.008. The interpretation of the regression coefficient is as follows: Compared to trade union members, who are used as the reference category or baseline, non-members of trade unions earn on average £5,277.98 **less** than trade union members. The direction of the relationship becomes clear through the negative sign, which indicates a negative relationship. The standard error of 977.008, which is given in brackets underneath the regression coefficient, represents the value by how much this result would vary if we were to take a sample out of our population repeatedly. Now we use a t-test to find out whether considering the standard error, the relationship is still significant by using the formula Coefficient/Standard Error = t value. This results in an approximate t-value of 5.402 for trade union membership. as this is greater than the absolute value of 2, we conclude that we have in fact found a statistically significant relationship (Fogarty, 2019, pp.199-201).
+  
+  
+#### Goodness of Fit of our Model  
+  
+The value for R² allows us to assess the suitability of this model for our data. Generally, R² takes on a value between -1 and 1. Multiple R-squared is 0.1834, which means that about 18.34% of the variance in our dependent variable (annual personal income) is explained by the independent variables included in the regression model, which are sex, religion, sexual orientation, constitutional view, trade union membership, supervisory position and age. The adjusted R-squared is 0.1698 and considers the number of predictors in the model, which gives a more conservative estimate of explained variance (Daróczi, 2015). 
+  
+In the following histogram, I will visualise the distribution of our model's residuals, as this will help us judge the suitability of our model.  
+
+```{r residuals, echo= FALSE}
+residuals <- residuals(model)
+mean_residuals <- mean(residuals)
+# Create a ggplot histogram of residuals
+ggplot(data.frame(residuals = residuals), aes(x = residuals)) +
+   geom_vline(xintercept = mean(residuals), color = "#1d3557", linetype = "dashed", size = 1) +
+ 
+ geom_histogram(fill="#ffacc5", colour="#f20089", bins=30, alpha=0.5) +
+
+   
+  labs(
+    x = "Residuals",
+    y = "Frequency") +
+  ggtitle("Histogram of Residuals") +
+    theme_gray() +
+  theme(
+     plot.title=element_text(family='special2', hjust=0.5, vjust=0.5,face='bold', colour='#1d3557', size=18),
+     axis.title.x = element_text(family="special3", size = 11, face = "bold", colour = "black"),
+     axis.title.y = element_text(family="special3", size = 11, face = "bold", colour = "black"))
+```
+  
+    
+While the mean of residuals visualised above lies at 0, which suggests a lack of bias within the model, we can also identify a very minimal slight right skew. This could be caused by outliers, which is an effect that was previously discussed. However, overall I argue that the mean of 0 indicates an overall decent fit of this model.
+
+This proof of a statistically significant relationship of trade union membership on annual personal income does not come as a surprise, considering the vast amount of literature on the "Union Wage Effect"(Freeman and Medoff, 1984; Blanchflower and Bryson, 2004; Wilmers, 2017). My hypothesis arguing that members of a trade union have a higher annual personal income than those who are not trade union members, is therefore correct as we have established throughout this report. 
+
+
+
+  
+#### Limitations and Future Research Recommendations
+
+We should note that 529 observations from our original NILT data set have been deleted due to missingness, effectively reducing our sample size to 675. This is important to be aware of as this could introduce bias into our model and distort some of the calculated coefficients if the exclusion of these observations was not entirely random. This raises questions of whether the findings from this model can be accurately applied on a larger scale, whether it be the whole data set or on a wider population scale.   
+  
+As Blanchflower and Bryson (2004) have pointed out, some of Freeman and Medoff's (1984) estimates do not consider the effect of differences in individual worker's ability on their salary and may therefore falsely assign the effect on wages of the latter to the collective bargaining power of unions. When looking at the regression model used in this report, I realised there is no variable capturing such differences in worker's abilities and I therefore conclude that my own work may also be biased in a similar way. Even Freeman and Medoff themselves would recommend "before/after studies" conducted on the same group of individuals to avoid "ability bias" (Freeman & Medoff, 1984, pp.43-60). For the future, I would recommend including a variable capturing the level of ability and expertise that a worker holds in their field when collecting data, e.g., the NILT survey, to avoid missing variable bias.  
+  
+As mentioned above, the relatively moderate response rate of 57% may have introduced nonresponse bias into my work. I would therefore suggest that strategies are adopted to increase the response rate in future surveys - as Lohr (2022) argues, a mere increase of the sample size would not do the same thing - in order to increase the validity and generalisability of research results. 
+
+
+
+
+## IV. Conclusion
+<!-- Word count: approx. 500 -->
+<!-- Clearly state your findings. Do the findings raise any questions for future research? -->
+
+In conclusion, this report has sought to assess through descriptive and inferential statistics whether there is a statistically significant impact of trade union membership on a person's annual personal income using data from the Northern Ireland Life and Times Survey. I have underpinned my own work throughout this report with Freeman and Medoff's (1984) work on the monopoly power of unions as well as Wilmers' (2017) theories on the union externally influencing wage setting. 
+
+My hypothesis arguing that trade union members tend to have a higher annual personal income than those who are not trade union members has proven to be true through sound statistical testing. The results from the multiple linear regression model have shown that there are other independent variables that also influence an individual's annual income, such as sex, supervisory position and age. At the same time, the independent variables of religion, sexual orientation and constitutional view were proven to have no statistically significant impact on annual personal income. 
+
+I conducted a goodness-of-fit analysis to assess the suitability of my model for the data using R² and adjusted R², which indicated that about 18.34% of the variance in annual personal income could be explained by the indpendent variables included in the model. I further proved the suitability of my model through the value of the mean of residuals being close to zero, which suggests minimal bias.
+
+While these findings are in congruence with the literature on the union wage effect, I must acknowledge the limitations of my work. The reduction of my sample size after filtering out missing observations compromises the generalisability of my results. Additionally, the lack of a variable capturing individual workers' abilities in the NILT dataset may have introduced missing variable bias into my work, falsely assigning the effect of greater working skills to union membership. This emphasises the importance of including such a variable in future research. 
+
+Overall, this report has contributed to the ongoing discourse about the role of trade unions within the labour market as it illustrates the effectiveness of the work and role of trade unions through rigorous statistical testing.
+The statistically significant relationship between trade union membership and annual personal income as proven in this report, stresses the positive effects that joining a trade union can have for individuals as it can help them increase their economic security through higher earnings. While this report made no distinction based on how long ago individuals had joined trade unions, I would suggest that an interesting perspective that research could also take is to assess the impact new trade union membership has on annual personal income, i.e., whether joining a trade union today makes a difference to someone's income, rather than merely assessing pre-existing trade union membership. Additionally, research into the ways these findings can differ across industries could further help our understanding of contemporary labour market dynamics that affect all economic agents.
+
+## V. Bibliography  
+  
+  ARK (2012). 2012 Northern Ireland Life & Times Survey Teaching Resources. [online] NILT. Available at: https://www.ark.ac.uk/teaching/NILT2012TeachingResources.pdf [Accessed 20 Dec. 2023].  
+    
+ARK (2023). About ARK. [online] www.ark.ac.uk. Available at: https://www.ark.ac.uk/ARK/about/overview [Accessed 20 Dec. 2023].  
+  
+Blanchflower, D.G. and Bryson, A. (2004). What effect do unions have on wages now and would freeman and medoff be surprised? Journal of Labor Research, [online] 25(3), pp.383–414. doi:https://doi.org/10.1007/s12122-004-1022-9.  
+  
+DarócziG. (2015). Mastering data analysis with R : gain clear insights into your data and solve real-world data science problems with R--from data munging to modeling and visualization. Birmingham, UK: Packt Publishing.  
+  
+Field, A., Miles, J. and Field, Z. (2012). Discovering Statistics Using R. 1st ed. [online] London: SAGE Publications Ltd. Available at: https://glasgow.rl.talis.com/link?url=https%3A%2F%2Fapp.talis.com%2Fglasgow%2Fplayer%23%2Fmodules%2F5f55ffaa3f2b343bc876562b%2Fresources%2F5f561eb63f2b343bc87656a8&sig=ee4330fab9eaf9191b250f9dec63f50e97c960f668f307dd95e641a13ba6476c [Accessed 28 Dec. 2023].  
+  
+Freeman, R.B. and Medoff, J.L. (1984). What Do Unions Do? New York: Basic Books.
+  
+Lohr, S.L. (2022). Sampling Design and Analysis. 3rd ed. Boca Raton: CRC Press.
+  
+Wetcher-Hendricks, D. (2011). Analyzing quantitative data : an introduction for social researchers. [online] Hoboken, N.J.: Wiley. Available at: https://books.google.de/books?id=vaugZdzeagAC&printsec=frontcover&source=gbs_ViewAPI&redir_esc=y#v=onepage&q&f=false [Accessed 30 Dec. 2023].  
+  
+Wilmers, N. (2017). Labor Unions as Activist Organizations: A Union Power Approach to Estimating Union Wage Effects. Social Forces, [online] 95(4), pp.1451–1477. doi:https://doi.org/10.1093/sf/sow108.
+  
+    
+      
+
+
+
+
+
+
+
+
